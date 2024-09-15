@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Admin Dashboard</h1>
+
+        <h2>Statistics</h2>
+        <!-- Form for selecting start and end dates -->
+        <form id="dateFilterForm" class="row mb-4" action="/admin" method="get">
+            <div class="col-md-3">
+                <label for="startDate" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="startDate" name="start_date" value="{{ start_date or '' }}" required>
+            </div>
+            <div class="col-md-3">
+                <label for="endDate" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="endDate" name="end_date" value="{{ end_date or '' }}" required>
+            </div>
+            <div class="col-md-3 align-self-end">
+                <button type="submit" class="btn btn-primary">Apply Filter</button>
+            </div>
+        </form>
+
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Total Transactions: {{ total_transactions }}</h4>
+                <h4>Total Amount: {{ total_amount }}</h4>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>Users</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td class="text-end">
+                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editUserModal" data-userid="{{ user.id }}" data-username="{{ user.username }}">Edit</button>
+                            <button class="btn btn-danger delete-user-btn" data-userid="{{ user.id }}">Delete</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <hr>
+
+        <h2>Transactions</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Transaction ID</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Username</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.id }}</td>
+                        <td>{{ transaction.transaction_type }}</td>
+                        <td>{{ transaction.amount }}</td>
+                        <td>{{ transaction.user.username }}</td>
+                        <td class="text-end">
+                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editTransactionModal" data-transactionid="{{ transaction.id }}" data-amount="{{ transaction.amount }}" data-transactiontype="{{ transaction.transaction_type }}">Edit</button>
+                            <button class="btn btn-danger delete-transaction-btn" data-transactionid="{{ transaction.id }}">Delete</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Modal for editing user -->
+        <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editUserForm">
+                            <div class="mb-3">
+                                <label for="newUsername" class="form-label">New Username</label>
+                                <input type="text" class="form-control" id="newUsername" name="newUsername" required>
+                                <input type="hidden" id="editUserId" name="userId">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="saveChangesBtn">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for editing transaction -->
+        <div class="modal fade" id="editTransactionModal" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editTransactionModalLabel">Edit Transaction</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editTransactionForm">
+                            <div class="mb-3">
+                                <label for="newAmount" class="form-label">New Amount</label>
+                                <input type="number" class="form-control" id="newAmount" name="newAmount" required>
+                                <label for="newTransactionType" class="form-label">New Transaction Type</label>
+                                <input type="text" class="form-control" id="newTransactionType" name="newTransactionType" required>
+                                <input type="hidden" id="editTransactionId" name="transactionId">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="saveTransactionChangesBtn">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Setup for user edit modal
+        const editUserModal = document.getElementById('editUserModal');
+        editUserModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const userId = button.getAttribute('data-userid');
+            const username = button.getAttribute('data-username');
+
+            const modalTitle = editUserModal.querySelector('.modal-title');
+            const modalBodyInput = editUserModal.querySelector('#newUsername');
+            const userIdInput = editUserModal.querySelector('#editUserId');
+
+            modalTitle.textContent = 'Edit User: ' + username;
+            modalBodyInput.value = username;
+            userIdInput.value = userId;
+        });
+
+        // Save changes for user
+        document.getElementById('saveChangesBtn').addEventListener('click', function () {
+            const userId = document.getElementById('editUserId').value;
+            const newUsername = document.getElementById('newUsername').value;
+
+            fetch(`/edit_user/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ new_username: newUsername })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === 'User updated') {
+                    location.reload();
+                } else {
+                    alert('Failed to update user');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Delete user
+        document.addEventListener("DOMContentLoaded", function() {
+            const deleteUserButtons = document.querySelectorAll('.delete-user-btn');
+
+            deleteUserButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-userid');
+
+                    if (confirm("Are you sure you want to delete this user?")) {
+                        fetch(`/delete_user/${userId}`, {
+                            method: 'DELETE',
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.message === 'User deleted') {
+                                location.reload();
+                            } else {
+                                alert('Failed to delete user');
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                    }
+                });
+            });
+        });
+
+        // Setup for transaction edit modal
+        const editTransactionModal = document.getElementById('editTransactionModal');
+        editTransactionModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const transactionId = button.getAttribute('data-transactionid');
+            const amount = button.getAttribute('data-amount');
+            const transactionType = button.getAttribute('data-transactiontype');
+
+            const modalTitle = editTransactionModal.querySelector('.modal-title');
+            const amountInput = editTransactionModal.querySelector('#newAmount');
+            const transactionTypeInput = editTransactionModal.querySelector('#newTransactionType');
+            const transactionIdInput = editTransactionModal.querySelector('#editTransactionId');
+
+            modalTitle.textContent = 'Edit Transaction: ' + transactionId;
+            amountInput.value = amount;
+            transactionTypeInput.value = transactionType;
+            transactionIdInput.value = transactionId;
+        });
+
+        // Save changes for transaction
+        document.getElementById('saveTransactionChangesBtn').addEventListener('click', function () {
+            const transactionId = document.getElementById('editTransactionId').value;
+            const newAmount = document.getElementById('newAmount').value;
+            const newTransactionType = document.getElementById('newTransactionType').value;
+
+            fetch(`/edit_transaction/${transactionId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ new_amount: newAmount, new_transaction_type: newTransactionType })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === 'Transaction updated') {
+                    location.reload();
+                } else {
+                    alert('Failed to update transaction');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Delete transaction
+        document.addEventListener("DOMContentLoaded", function() {
+            const deleteTransactionButtons = document.querySelectorAll('.delete-transaction-btn');
+
+            deleteTransactionButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const transactionId = this.getAttribute('data-transactionid');
+
+                    if (confirm("Are you sure you want to delete this transaction?")) {
+                        fetch(`/delete_transaction/${transactionId}`, {
+                            method: 'DELETE',
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.message === 'Transaction deleted') {
+                                location.reload();
+                            } else {
+                                alert('Failed to delete transaction');
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
